@@ -1,5 +1,10 @@
 import React from 'react';
-import { useInfiniteProducts, useProductCategories, useProductSearch } from '../infrastructure/product.hook';
+import {
+  useInfiniteProducts,
+  useInfiniteProductsByCategory,
+  useProductCategories,
+  useProductSearch,
+} from '../infrastructure/product.hook';
 import { Badge, Loader, Select, Text, TextInput } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
 import Link from 'next/link';
@@ -25,11 +30,6 @@ type ProductPageProps = {
 
 const ProductPage = ({ initialProducts, initialCategories, initialError }: ProductPageProps) => {
   const router = useRouter();
-  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage, isError: isProductsError } = useInfiniteProducts(
-    undefined,
-    12,
-    initialProducts,
-  );
   const { data: categoriesData, isError: isCategoriesError } = useProductCategories(initialCategories);
   const [searchKeyword, setSearchKeyword] = React.useState<string>('');
   const [debouncedSearchKeyword] = useDebouncedValue(searchKeyword.trim(), 350);
@@ -39,14 +39,67 @@ const ProductPage = ({ initialProducts, initialCategories, initialError }: Produ
   const [snackbarMessage, setSnackbarMessage] = React.useState<string | null>(initialError ?? null);
   const loadMoreRef = React.useRef<HTMLDivElement | null>(null);
   const isSearchMode = debouncedSearchKeyword.length > 0;
+  const isCategoryMode = !isSearchMode && selectedCategory !== 'all';
+  const isDefaultMode = !isSearchMode && selectedCategory === 'all';
+  const apiSortParams =
+    sortByPrice === 'none'
+      ? undefined
+      : {
+          sortBy: 'price' as const,
+          order: sortByPrice as 'asc' | 'desc',
+        };
 
-  const products = React.useMemo(() => data?.pages.flatMap((page) => page.data) ?? [], [data]);
+  const {
+    data: allProductsData,
+    isLoading: isAllProductsLoading,
+    hasNextPage: allProductsHasNextPage,
+    isFetchingNextPage: isAllProductsFetchingNextPage,
+    fetchNextPage: fetchAllProductsNextPage,
+    isError: isAllProductsError,
+  } = useInfiniteProducts(
+    apiSortParams,
+    12,
+    isDefaultMode && sortByPrice === 'none' ? initialProducts : undefined,
+    isDefaultMode,
+  );
+
+  const {
+    data: categoryProductsData,
+    isLoading: isCategoryProductsLoading,
+    hasNextPage: categoryProductsHasNextPage,
+    isFetchingNextPage: isCategoryProductsFetchingNextPage,
+    fetchNextPage: fetchCategoryProductsNextPage,
+    isError: isCategoryProductsError,
+  } = useInfiniteProductsByCategory(
+    selectedCategory,
+    apiSortParams,
+    12,
+    isCategoryMode,
+  );
+
+  const products = React.useMemo(() => {
+    if (isSearchMode) {
+      return searchData?.data ?? [];
+    }
+
+    if (isCategoryMode) {
+      return categoryProductsData?.pages.flatMap((page) => page.data) ?? [];
+    }
+
+    return allProductsData?.pages.flatMap((page) => page.data) ?? [];
+  }, [allProductsData?.pages, categoryProductsData?.pages, isCategoryMode, isSearchMode, searchData?.data]);
+
   const totalProducts = React.useMemo(() => {
     if (isSearchMode) {
       return searchData?.meta?.total ?? searchData?.data.length ?? 0;
     }
-    return data?.pages?.[0]?.meta?.total ?? products.length;
-  }, [data?.pages, isSearchMode, products.length, searchData?.data.length, searchData?.meta?.total]);
+
+    if (isCategoryMode) {
+      return categoryProductsData?.pages?.[0]?.meta?.total ?? products.length;
+    }
+
+    return allProductsData?.pages?.[0]?.meta?.total ?? products.length;
+  }, [allProductsData?.pages, categoryProductsData?.pages, isCategoryMode, isSearchMode, products.length, searchData?.data.length, searchData?.meta?.total]);
 
   const categoryOptions = React.useMemo(() => {
     const apiCategories = categoriesData?.data ?? [];
@@ -66,19 +119,18 @@ const ProductPage = ({ initialProducts, initialCategories, initialError }: Produ
     ];
   }, [categoriesData?.data, products]);
 
-  const sourceProducts = isSearchMode ? (searchData?.data ?? []) : products;
-
   const visibleProducts = React.useMemo(() => {
-    const filtered = sourceProducts.filter((product) => selectedCategory === 'all' || product.category === selectedCategory);
+    if (isSearchMode) {
+      return products.filter((product) => selectedCategory === 'all' || product.category === selectedCategory);
+    }
+    return products;
+  }, [isSearchMode, products, selectedCategory]);
 
-    if (sortByPrice === 'asc') {
-      return [...filtered].sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
-    }
-    if (sortByPrice === 'desc') {
-      return [...filtered].sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
-    }
-    return filtered;
-  }, [selectedCategory, sortByPrice, sourceProducts]);
+  const hasNextPage = isCategoryMode ? categoryProductsHasNextPage : allProductsHasNextPage;
+  const isFetchingNextPage = isCategoryMode ? isCategoryProductsFetchingNextPage : isAllProductsFetchingNextPage;
+  const fetchNextPage = isCategoryMode ? fetchCategoryProductsNextPage : fetchAllProductsNextPage;
+  const isLoading = isSearchMode ? false : isCategoryMode ? isCategoryProductsLoading : isAllProductsLoading;
+  const isProductsError = isSearchMode ? false : isCategoryMode ? isCategoryProductsError : isAllProductsError;
 
   React.useEffect(() => {
     if (isSearchMode) {
@@ -117,14 +169,6 @@ const ProductPage = ({ initialProducts, initialCategories, initialError }: Produ
     const timeoutId = setTimeout(() => setSnackbarMessage(null), 4200);
     return () => clearTimeout(timeoutId);
   }, [snackbarMessage]);
-
-  if (isLoading && !isSearchMode) {
-    return (
-      <section className={styles.loadingWrapper}>
-        <Loader color="dark" />
-      </section>
-    );
-  }
 
   return (
     <section className={styles.page}>
@@ -212,7 +256,12 @@ const ProductPage = ({ initialProducts, initialCategories, initialError }: Produ
           </button>
         </div>
 
-        {visibleProducts.length === 0 ? (
+        {isLoading && !isSearchMode ? (
+          <div className={styles.listLoading}>
+            <Loader color="dark" />
+            <Text>Loading products...</Text>
+          </div>
+        ) : visibleProducts.length === 0 ? (
           <div className={styles.emptyState}>No products found for this filter.</div>
         ) : (
           <>

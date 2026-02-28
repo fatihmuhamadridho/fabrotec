@@ -16,6 +16,7 @@ export const useInfiniteProducts = (
   params?: Omit<ProductRequest.getAllProduct, 'limit' | 'skip'>,
   pageSize = 12,
   initialPage?: ProductResult.getAllProduct,
+  enabled = true,
 ) => {
   const response = useInfiniteQuery({
     queryKey: ['products-infinite', params, pageSize],
@@ -35,6 +36,7 @@ export const useInfiniteProducts = (
       }
       return loadedCount;
     },
+    enabled,
     initialData: initialPage
       ? {
           pages: [initialPage],
@@ -88,6 +90,7 @@ export const useInfiniteProductsByCategory = (
   slug?: string,
   params?: Omit<ProductRequest.getProductsByCategory, 'slug' | 'limit' | 'skip'>,
   pageSize = 12,
+  enabled = true,
 ) => {
   const normalizedSlug = (slug ?? '').trim();
 
@@ -101,7 +104,7 @@ export const useInfiniteProductsByCategory = (
         limit: pageSize,
         skip: pageParam,
       }),
-    enabled: normalizedSlug.length > 0,
+    enabled: normalizedSlug.length > 0 && enabled,
     getNextPageParam: (lastPage, allPages) => {
       const total = lastPage.meta?.total ?? 0;
       const loadedCount = allPages.reduce((acc, page) => acc + page.data.length, 0);
