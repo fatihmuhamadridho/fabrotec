@@ -133,6 +133,7 @@ const ProductPage = ({ initialProducts, initialCategories, initialError }: Produ
   const fetchNextPage = isCategoryMode ? fetchCategoryProductsNextPage : fetchAllProductsNextPage;
   const isLoading = isSearchMode ? false : isCategoryMode ? isCategoryProductsLoading : isAllProductsLoading;
   const isProductsError = isSearchMode ? false : isCategoryMode ? isCategoryProductsError : isAllProductsError;
+  const canLoadMore = !isSearchMode && products.length < totalProducts;
 
   React.useEffect(() => {
     if (isSearchMode) {
@@ -140,7 +141,7 @@ const ProductPage = ({ initialProducts, initialCategories, initialError }: Produ
     }
 
     const sentinel = loadMoreRef.current;
-    if (!sentinel || !hasNextPage) {
+    if (!sentinel || !canLoadMore) {
       return;
     }
 
@@ -150,9 +151,9 @@ const ProductPage = ({ initialProducts, initialCategories, initialError }: Produ
         const isIntersecting = Boolean(entry?.isIntersecting);
         isSentinelIntersectingRef.current = isIntersecting;
 
-        if (isIntersecting && hasNextPage && !isFetchingNextPage && !isInfiniteTriggerLocked) {
+        if (isIntersecting && canLoadMore && !isFetchingNextPage && !isInfiniteTriggerLocked) {
           setIsInfiniteTriggerLocked(true);
-          fetchNextPage();
+          void fetchNextPage();
         }
 
         if (!isIntersecting && isInfiniteTriggerLocked && !isFetchingNextPage) {
@@ -164,7 +165,7 @@ const ProductPage = ({ initialProducts, initialCategories, initialError }: Produ
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage, isInfiniteTriggerLocked, isSearchMode]);
+  }, [canLoadMore, fetchNextPage, isFetchingNextPage, isInfiniteTriggerLocked, isSearchMode]);
 
   React.useEffect(() => {
     if (!isFetchingNextPage && isInfiniteTriggerLocked && !isSentinelIntersectingRef.current) {
@@ -352,7 +353,7 @@ const ProductPage = ({ initialProducts, initialCategories, initialError }: Produ
               </div>
             ) : null}
 
-            {!isSearchMode && hasNextPage && !isFetchingNextPage ? (
+            {!isSearchMode && canLoadMore && !isFetchingNextPage ? (
               <div className={styles.loadMoreActionWrap}>
                 <button
                   type="button"
@@ -367,7 +368,7 @@ const ProductPage = ({ initialProducts, initialCategories, initialError }: Produ
               </div>
             ) : null}
 
-            {!isSearchMode && !hasNextPage ? <div className={styles.endState}>You have reached the end of the catalog.</div> : null}
+            {!isSearchMode && !canLoadMore ? <div className={styles.endState}>You have reached the end of the catalog.</div> : null}
           </>
         )}
       </div>
