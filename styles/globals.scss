@@ -1,1 +1,39 @@
-/* Global SCSS styles go here */
+:root {
+  --app-bg:
+    radial-gradient(circle at 8% 4%, rgba(255, 189, 89, 0.22), transparent 32%),
+    radial-gradient(circle at 90% 12%, rgba(58, 123, 213, 0.2), transparent 30%),
+    linear-gradient(180deg, #f8f9fb 0%, #eef2f6 100%);
+  --app-bg-solid: #eef2f6;
+}
+
+html,
+body,
+#__next {
+  min-height: 100%;
+}
+
+html,
+body {
+  background-color: var(--app-bg-solid);
+}
+
+body {
+  margin: 0;
+  position: relative;
+  color: #111827;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: var(--app-bg);
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.appMain {
+  min-height: 100vh;
+}

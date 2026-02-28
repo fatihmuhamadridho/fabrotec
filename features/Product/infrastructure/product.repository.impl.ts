@@ -17,22 +17,47 @@ export class ProductRepositoryImpl implements ProductRepository {
 
   async getDetailProduct(params?: ProductRequest.getDetailProduct): Promise<ProductResponse.getDetailProduct> {
     try {
-      const response = await this.axiosService.get('/products', { params });
+      const response = await this.axiosService.get(`/products/${params?.id}`);
       return response;
     } catch (error) {
       handleHttpError(error, 'Product fetch failed');
     }
   }
 
-  createProduct(params?: ProductRequest.createProduct): Promise<ProductResponse.createProduct> {
-    throw new Error('Method not implemented.');
+  async searchProduct(params: ProductRequest.searchProduct): Promise<ProductResponse.searchProduct> {
+    try {
+      const response = await this.axiosService.get('/products/search', { params });
+      return response;
+    } catch (error) {
+      handleHttpError(error, 'Product search failed');
+    }
   }
 
-  updateProduct(params?: ProductRequest.updateProduct): Promise<ProductResponse.updateProduct> {
-    throw new Error('Method not implemented.');
+  async getAllCategories(): Promise<ProductResponse.getAllCategories> {
+    try {
+      const response = await this.axiosService.get('/products/categories');
+      return response;
+    } catch (error) {
+      handleHttpError(error, 'Product categories fetch failed');
+    }
   }
 
-  deleteProduct(params?: ProductRequest.deleteProduct): Promise<ProductResponse.deleteProduct> {
-    throw new Error('Method not implemented.');
+  async getCategoryList(): Promise<ProductResponse.getCategoryList> {
+    try {
+      const response = await this.axiosService.get('/products/category-list');
+      return response;
+    } catch (error) {
+      handleHttpError(error, 'Product category-list fetch failed');
+    }
+  }
+
+  async getProductsByCategory(params: ProductRequest.getProductsByCategory): Promise<ProductResponse.getProductsByCategory> {
+    try {
+      const { slug, ...queryParams } = params;
+      const response = await this.axiosService.get(`/products/category/${slug}`, { params: queryParams });
+      return response;
+    } catch (error) {
+      handleHttpError(error, 'Products by category fetch failed');
+    }
   }
 }
