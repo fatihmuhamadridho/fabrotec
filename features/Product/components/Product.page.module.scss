@@ -4,6 +4,34 @@
   overflow: hidden;
 }
 
+.snackbar {
+  position: fixed;
+  left: 50%;
+  bottom: 1rem;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  max-width: min(92vw, 36rem);
+  border: 1px solid rgba(237, 122, 122, 0.5);
+  border-radius: 0.8rem;
+  background: rgba(37, 19, 19, 0.95);
+  color: #fff2f2;
+  padding: 0.65rem 0.8rem;
+  box-shadow: 0 16px 30px -20px rgba(0, 0, 0, 0.9);
+  font-size: 0.88rem;
+}
+
+.snackbarClose {
+  border: none;
+  background: transparent;
+  color: #ffdede;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
 .loadingWrapper {
   min-height: 100vh;
   display: grid;

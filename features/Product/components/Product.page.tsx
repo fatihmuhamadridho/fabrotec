@@ -4,6 +4,7 @@ import { Badge, Loader, Select, Text, TextInput } from '@mantine/core';
 import { useDebouncedValue } from '@mantine/hooks';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/router';
 import { ProductResult } from '../domain/product.type';
 import styles from './Product.page.module.scss';
 
@@ -13,19 +14,29 @@ const formatPrice = (value?: number) =>
     maximumFractionDigits: 2,
   }).format(value ?? 0);
 
+const IMAGE_BLUR_PLACEHOLDER =
+  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEwIDgiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjgiIGZpbGw9IiNlZWYyZjYiLz48L3N2Zz4=';
+
 type ProductPageProps = {
   initialProducts?: ProductResult.getAllProduct;
   initialCategories?: ProductResult.getAllCategories;
+  initialError?: string | null;
 };
 
-const ProductPage = ({ initialProducts, initialCategories }: ProductPageProps) => {
-  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage } = useInfiniteProducts(undefined, 12, initialProducts);
-  const { data: categoriesData } = useProductCategories(initialCategories);
+const ProductPage = ({ initialProducts, initialCategories, initialError }: ProductPageProps) => {
+  const router = useRouter();
+  const { data, isLoading, hasNextPage, isFetchingNextPage, fetchNextPage, isError: isProductsError } = useInfiniteProducts(
+    undefined,
+    12,
+    initialProducts,
+  );
+  const { data: categoriesData, isError: isCategoriesError } = useProductCategories(initialCategories);
   const [searchKeyword, setSearchKeyword] = React.useState<string>('');
   const [debouncedSearchKeyword] = useDebouncedValue(searchKeyword.trim(), 350);
-  const { data: searchData, isFetching: isSearchFetching } = useProductSearch(debouncedSearchKeyword);
+  const { data: searchData, isFetching: isSearchFetching, isError: isSearchError } = useProductSearch(debouncedSearchKeyword);
   const [selectedCategory, setSelectedCategory] = React.useState<string>('all');
   const [sortByPrice, setSortByPrice] = React.useState<string>('none');
+  const [snackbarMessage, setSnackbarMessage] = React.useState<string | null>(initialError ?? null);
   const loadMoreRef = React.useRef<HTMLDivElement | null>(null);
   const isSearchMode = debouncedSearchKeyword.length > 0;
 
@@ -92,6 +103,21 @@ const ProductPage = ({ initialProducts, initialCategories }: ProductPageProps) =
     return () => observer.disconnect();
   }, [fetchNextPage, hasNextPage, isFetchingNextPage, isSearchMode]);
 
+  React.useEffect(() => {
+    if (isProductsError || isCategoriesError || (isSearchMode && isSearchError)) {
+      setSnackbarMessage('Network issue: some product data could not be loaded. Please try again.');
+    }
+  }, [isCategoriesError, isProductsError, isSearchError, isSearchMode]);
+
+  React.useEffect(() => {
+    if (!snackbarMessage) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => setSnackbarMessage(null), 4200);
+    return () => clearTimeout(timeoutId);
+  }, [snackbarMessage]);
+
   if (isLoading && !isSearchMode) {
     return (
       <section className={styles.loadingWrapper}>
@@ -104,6 +130,14 @@ const ProductPage = ({ initialProducts, initialCategories }: ProductPageProps) =
     <section className={styles.page}>
       <div className={styles.backgroundGlowTop} />
       <div className={styles.backgroundGlowBottom} />
+      {snackbarMessage ? (
+        <div className={styles.snackbar} role="status" aria-live="polite">
+          <span>{snackbarMessage}</span>
+          <button type="button" className={styles.snackbarClose} onClick={() => setSnackbarMessage(null)} aria-label="Close">
+            ✕
+          </button>
+        </div>
+      ) : null}
 
       <div className={styles.container}>
         <div className={styles.hero}>
@@ -183,8 +217,22 @@ const ProductPage = ({ initialProducts, initialCategories }: ProductPageProps) =
         ) : (
           <>
             <div className={styles.productGrid}>
-              {visibleProducts.map((product) => (
-                <Link key={product.id} href={`/products/${product.id}`} className={styles.productCard}>
+              {visibleProducts.map((product, index) => (
+                <Link
+                  key={product.id}
+                  href={`/products/${product.id}`}
+                  className={styles.productCard}
+                  onMouseEnter={() => {
+                    if (product.id) {
+                      void router.prefetch(`/products/${product.id}`);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (product.id) {
+                      void router.prefetch(`/products/${product.id}`);
+                    }
+                  }}
+                >
                   <div className={styles.cardImageWrap}>
                     {product.imageUrl ? (
                       <Image
@@ -192,6 +240,10 @@ const ProductPage = ({ initialProducts, initialCategories }: ProductPageProps) =
                         alt={product.title ?? 'Product image'}
                         className={styles.cardImage}
                         fill
+                        priority={index < 4}
+                        loading={index < 4 ? 'eager' : 'lazy'}
+                        placeholder="blur"
+                        blurDataURL={IMAGE_BLUR_PLACEHOLDER}
                         sizes="(max-width: 639px) 100vw, (max-width: 959px) 50vw, 33vw"
                       />
                     ) : (

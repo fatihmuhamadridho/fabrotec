@@ -28,6 +28,7 @@ export default function App({ Component, pageProps }: AppProps) {
     <React.Fragment>
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        <link rel="preconnect" href="https://cdn.dummyjson.com" crossOrigin="" />
       </Head>
       <QueryClientProvider client={queryClient}>
         <MantineProvider theme={theme}>

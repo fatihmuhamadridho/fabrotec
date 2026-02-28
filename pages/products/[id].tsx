@@ -13,17 +13,24 @@ type ProductDetailParams = {
 };
 
 export const getStaticPaths: GetStaticPaths<ProductDetailParams> = async () => {
-  const productController = new ProductController();
-  const products = await productController.getAllProduct({ limit: 30, skip: 0, select: 'id' });
+  try {
+    const productController = new ProductController();
+    const products = await productController.getAllProduct({ limit: 30, skip: 0, select: 'id' });
 
-  return {
-    paths: products.data
-      .filter((item) => typeof item.id === 'number')
-      .map((item) => ({
-        params: { id: String(item.id) },
-      })),
-    fallback: 'blocking',
-  };
+    return {
+      paths: products.data
+        .filter((item) => typeof item.id === 'number')
+        .map((item) => ({
+          params: { id: String(item.id) },
+        })),
+      fallback: 'blocking',
+    };
+  } catch {
+    return {
+      paths: [],
+      fallback: 'blocking',
+    };
+  }
 };
 
 export const getStaticProps: GetStaticProps<ProductDetailRouteProps, ProductDetailParams> = async ({ params }) => {
@@ -38,14 +45,22 @@ export const getStaticProps: GetStaticProps<ProductDetailRouteProps, ProductDeta
 
   try {
     const initialProduct = await productController.getDetailProduct({ id: productId });
-    const categorySlug = initialProduct.data.category ?? '';
+    const categorySlug = initialProduct.data.category ?? 'smartphones';
+    let initialRecommended: ProductResult.getProductsByCategory | undefined;
 
-    const initialRecommended = await productController.getProductsByCategory({
-      slug: categorySlug,
-      limit: 8,
-      sortBy: 'rating',
-      order: 'desc',
-    });
+    try {
+      initialRecommended = await productController.getProductsByCategory({
+        slug: categorySlug,
+        limit: 8,
+        sortBy: 'rating',
+        order: 'desc',
+      });
+    } catch {
+      initialRecommended = {
+        data: [],
+        meta: { total: 0, skip: 0, limit: 8 },
+      };
+    }
 
     return {
       props: {

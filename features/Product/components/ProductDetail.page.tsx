@@ -13,6 +13,9 @@ const formatPrice = (value?: number) =>
     maximumFractionDigits: 2,
   }).format(value ?? 0);
 
+const IMAGE_BLUR_PLACEHOLDER =
+  'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEwIDgiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjgiIGZpbGw9IiNlZWYyZjYiLz48L3N2Zz4=';
+
 type ProductDetailPageProps = {
   initialProduct?: ProductResult.getDetailProduct;
   initialRecommended?: ProductResult.getProductsByCategory;
@@ -20,16 +23,35 @@ type ProductDetailPageProps = {
 
 const ProductDetailPage = ({ initialProduct, initialRecommended }: ProductDetailPageProps) => {
   const router = useRouter();
+  const fallbackId = initialProduct?.data?.id;
+
+  React.useEffect(() => {
+    void router.prefetch('/');
+  }, [router]);
+
+  const handleBackToCatalog = React.useCallback(
+    (event: React.MouseEvent<HTMLAnchorElement>) => {
+      event.preventDefault();
+
+      if (window.history.length > 1) {
+        router.back();
+        return;
+      }
+
+      void router.push('/');
+    },
+    [router],
+  );
 
   const productId = React.useMemo(() => {
     const rawId = router.query.id;
     if (!rawId) {
-      return undefined;
+      return fallbackId;
     }
 
     const parsed = Number(Array.isArray(rawId) ? rawId[0] : rawId);
-    return Number.isFinite(parsed) ? parsed : undefined;
-  }, [router.query.id]);
+    return Number.isFinite(parsed) ? parsed : fallbackId;
+  }, [fallbackId, router.query.id]);
 
   const { data, isLoading, isError } = useProductDetail(productId, initialProduct);
   const product = data?.data;
@@ -68,7 +90,7 @@ const ProductDetailPage = ({ initialProduct, initialRecommended }: ProductDetail
     [product?.id, recommendedData?.data],
   );
 
-  if (!router.isReady || isLoading) {
+  if (isLoading && !product) {
     return (
       <section className={styles.loadingWrapper}>
         <Loader color="dark" />
@@ -81,7 +103,7 @@ const ProductDetailPage = ({ initialProduct, initialRecommended }: ProductDetail
       <section className={styles.errorWrapper}>
         <Text className={styles.errorTitle}>Product not found</Text>
         <Text className={styles.errorSubtitle}>The product you are looking for is unavailable or the ID is invalid.</Text>
-        <Link href="/" className={styles.backLink}>
+        <Link href="/" className={styles.backLink} onClick={handleBackToCatalog}>
           Back to catalog
         </Link>
       </section>
@@ -93,7 +115,7 @@ const ProductDetailPage = ({ initialProduct, initialRecommended }: ProductDetail
       <div className={styles.container}>
         <div className={styles.topBar}>
           <div className={styles.breadcrumb}>
-            <Link href="/" className={styles.backLink}>
+            <Link href="/" className={styles.backLink} onClick={handleBackToCatalog}>
               Catalog
             </Link>
             <span className={styles.breadcrumbSeparator}>/</span>
@@ -112,6 +134,8 @@ const ProductDetailPage = ({ initialProduct, initialRecommended }: ProductDetail
                   className={styles.mainImage}
                   fill
                   priority
+                  placeholder="blur"
+                  blurDataURL={IMAGE_BLUR_PLACEHOLDER}
                   sizes="(max-width: 1023px) 100vw, 56vw"
                 />
               ) : (
@@ -161,6 +185,8 @@ const ProductDetailPage = ({ initialProduct, initialRecommended }: ProductDetail
                       alt={`Product thumbnail ${index + 1}`}
                       className={styles.thumbnailImage}
                       fill
+                      placeholder="blur"
+                      blurDataURL={IMAGE_BLUR_PLACEHOLDER}
                       sizes="(max-width: 767px) 25vw, (max-width: 1023px) 12vw, 8vw"
                     />
                   </button>
@@ -231,8 +257,22 @@ const ProductDetailPage = ({ initialProduct, initialRecommended }: ProductDetail
             <div className={styles.recommendedEmpty}>No recommendations available right now.</div>
           ) : (
             <div className={styles.recommendedGrid}>
-              {recommendedProducts.map((item) => (
-                <Link key={item.id} href={`/products/${item.id}`} className={styles.recommendedCard}>
+              {recommendedProducts.map((item, index) => (
+                <Link
+                  key={item.id}
+                  href={`/products/${item.id}`}
+                  className={styles.recommendedCard}
+                  onMouseEnter={() => {
+                    if (item.id) {
+                      void router.prefetch(`/products/${item.id}`);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (item.id) {
+                      void router.prefetch(`/products/${item.id}`);
+                    }
+                  }}
+                >
                   <div className={styles.recommendedImageWrap}>
                     {item.imageUrl ? (
                       <Image
@@ -240,6 +280,10 @@ const ProductDetailPage = ({ initialProduct, initialRecommended }: ProductDetail
                         alt={item.title ?? 'Recommended product image'}
                         className={styles.recommendedImage}
                         fill
+                        priority={index < 2}
+                        loading={index < 2 ? 'eager' : 'lazy'}
+                        placeholder="blur"
+                        blurDataURL={IMAGE_BLUR_PLACEHOLDER}
                         sizes="(max-width: 767px) 100vw, (max-width: 1023px) 50vw, 25vw"
                       />
                     ) : (
