@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   env: {
     APP_VERSION: process.env.npm_package_version,
+    BASE_API_URL: process.env.BASE_API_URL,
   },
 };
 

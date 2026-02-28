@@ -1,5 +1,5 @@
 type ProductProps = {
-  readonly id?: string;
+  readonly id?: number;
   title?: string;
   description?: string;
   price?: number;
@@ -7,7 +7,7 @@ type ProductProps = {
 };
 
 export class Product implements ProductProps {
-  readonly id?: string;
+  readonly id?: number;
   title?: string;
   description?: string;
   price?: number;
