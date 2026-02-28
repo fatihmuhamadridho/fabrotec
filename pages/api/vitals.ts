@@ -6,7 +6,6 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     return;
   }
 
-  // Keep this light-weight; in production this can be forwarded to analytics/storage.
   if (process.env.NODE_ENV !== 'production') {
     console.info('[web-vitals]', req.body);
   }

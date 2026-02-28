@@ -32,12 +32,6 @@ const ProductDetailPage = ({ initialProduct, initialRecommended }: ProductDetail
   const handleBackToCatalog = React.useCallback(
     (event: React.MouseEvent<HTMLAnchorElement>) => {
       event.preventDefault();
-
-      if (window.history.length > 1) {
-        router.back();
-        return;
-      }
-
       void router.push('/');
     },
     [router],
