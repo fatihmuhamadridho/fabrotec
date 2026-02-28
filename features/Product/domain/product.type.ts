@@ -61,7 +61,7 @@ export namespace ProductResponse {
     skip: number;
     limit: number;
   };
-  export type getDetailProduct = unknown;
+  export type getDetailProduct = Product;
   export type createProduct = unknown;
   export type updateProduct = unknown;
   export type deleteProduct = unknown;
