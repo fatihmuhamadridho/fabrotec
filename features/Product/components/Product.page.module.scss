@@ -296,6 +296,30 @@
   font-size: 0.9rem;
 }
 
+.loadMoreActionWrap {
+  margin-top: 0.75rem;
+  display: flex;
+  justify-content: center;
+}
+
+.loadMoreButton {
+  height: 2.6rem;
+  padding: 0 1rem;
+  border: 1px solid #cfd7e4;
+  border-radius: 0.75rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+  color: #1f2f45;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 16px -14px rgba(0, 0, 0, 0.9);
+  }
+}
+
 .endState {
   border-top: 1px solid rgba(163, 175, 192, 0.35);
   padding-top: 0.9rem;

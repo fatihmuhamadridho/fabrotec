@@ -37,7 +37,9 @@ const ProductPage = ({ initialProducts, initialCategories, initialError }: Produ
   const [selectedCategory, setSelectedCategory] = React.useState<string>('all');
   const [sortByPrice, setSortByPrice] = React.useState<string>('none');
   const [snackbarMessage, setSnackbarMessage] = React.useState<string | null>(initialError ?? null);
+  const [isInfiniteTriggerLocked, setIsInfiniteTriggerLocked] = React.useState(false);
   const loadMoreRef = React.useRef<HTMLDivElement | null>(null);
+  const isSentinelIntersectingRef = React.useRef(false);
   const isSearchMode = debouncedSearchKeyword.length > 0;
   const isCategoryMode = !isSearchMode && selectedCategory !== 'all';
   const isDefaultMode = !isSearchMode && selectedCategory === 'all';
@@ -144,16 +146,36 @@ const ProductPage = ({ initialProducts, initialCategories, initialError }: Produ
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
+        const [entry] = entries;
+        const isIntersecting = Boolean(entry?.isIntersecting);
+        isSentinelIntersectingRef.current = isIntersecting;
+
+        if (isIntersecting && hasNextPage && !isFetchingNextPage && !isInfiniteTriggerLocked) {
+          setIsInfiniteTriggerLocked(true);
           fetchNextPage();
         }
+
+        if (!isIntersecting && isInfiniteTriggerLocked && !isFetchingNextPage) {
+          setIsInfiniteTriggerLocked(false);
+        }
       },
-      { rootMargin: '240px 0px' },
+      { rootMargin: '0px' },
     );
 
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage, isSearchMode]);
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, isInfiniteTriggerLocked, isSearchMode]);
+
+  React.useEffect(() => {
+    if (!isFetchingNextPage && isInfiniteTriggerLocked && !isSentinelIntersectingRef.current) {
+      setIsInfiniteTriggerLocked(false);
+    }
+  }, [isFetchingNextPage, isInfiniteTriggerLocked, products.length]);
+
+  React.useEffect(() => {
+    setIsInfiniteTriggerLocked(false);
+    isSentinelIntersectingRef.current = false;
+  }, [debouncedSearchKeyword, selectedCategory, sortByPrice]);
 
   React.useEffect(() => {
     if (isProductsError || isCategoriesError || (isSearchMode && isSearchError)) {
@@ -327,6 +349,21 @@ const ProductPage = ({ initialProducts, initialCategories, initialError }: Produ
               <div className={styles.loadMoreState}>
                 <Loader size="sm" color="dark" />
                 <Text>Loading more products...</Text>
+              </div>
+            ) : null}
+
+            {!isSearchMode && hasNextPage && !isFetchingNextPage ? (
+              <div className={styles.loadMoreActionWrap}>
+                <button
+                  type="button"
+                  className={styles.loadMoreButton}
+                  onClick={() => {
+                    setIsInfiniteTriggerLocked(true);
+                    void fetchNextPage();
+                  }}
+                >
+                  Load more
+                </button>
               </div>
             ) : null}
 
